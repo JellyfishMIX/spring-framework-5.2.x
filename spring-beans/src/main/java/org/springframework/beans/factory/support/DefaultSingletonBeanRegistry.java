@@ -689,6 +689,9 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 
 	/**
 	 * Clear all cached singleton instances in this registry.
+	 *
+	 * 清空各级缓存
+	 *
 	 * @since 4.3.15
 	 */
 	protected void clearSingletonCache() {
@@ -787,6 +790,8 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * any sort of extended singleton creation phase. In particular, subclasses
 	 * should <i>not</i> have their own mutexes involved in singleton creation,
 	 * to avoid the potential for deadlocks in lazy-init situations.
+	 *
+	 * 获取 full singleton lock，用在给一级缓存加锁的场景下
 	 */
 	@Override
 	public final Object getSingletonMutex() {
