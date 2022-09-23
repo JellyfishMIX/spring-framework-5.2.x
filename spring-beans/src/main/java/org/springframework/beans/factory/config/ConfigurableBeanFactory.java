@@ -164,7 +164,7 @@ public interface ConfigurableBeanFactory extends HierarchicalBeanFactory, Single
 	 * An ApplicationContext will typically set a standard expression strategy
 	 * here, supporting "#{...}" expressions in a Unified EL compatible style.
 	 *
-	 * bean的表达式解析器，设置表达式解析器
+	 * bean 的表达式解析器，设置表达式解析器
 	 *
 	 * @since 3.0
 	 */
