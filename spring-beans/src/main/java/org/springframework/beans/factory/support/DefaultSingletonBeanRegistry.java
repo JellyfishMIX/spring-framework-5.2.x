@@ -315,9 +315,9 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 		Assert.notNull(beanName, "Bean name must not be null");
 		// 对 singletonObjects 加锁，保证一套操作的原子性，线程安全
 		synchronized (this.singletonObjects) {
-			// 先尝试去 singletonObjects 中获取 bean
+			// 先尝试去 singletonObjects 一级缓存中获取 bean
 			Object singletonObject = this.singletonObjects.get(beanName);
-			// singletonObjects 中未获取到对应的 bean
+			// singletonObjects 一级缓存中未获取到对应的 bean
 			if (singletonObject == null) {
 				// 当前工厂的 bean 正在销毁中时，不支持获取 bean
 				if (this.singletonsCurrentlyInDestruction) {

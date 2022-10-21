@@ -153,7 +153,7 @@ public abstract class FactoryBeanRegistrySupport extends DefaultSingletonBeanReg
 								afterSingletonCreation(beanName);
 							}
 						}
-						// 如果一级缓存中包含 beanName 对应的 singleton 实例
+						// 如果一级缓存中包含 beanName 对应的 singleton 实例，则添加到 factoryBean 创建的 singleton 对象缓存中
 						if (containsSingleton(beanName)) {
 							this.factoryBeanObjectCache.put(beanName, object);
 						}
