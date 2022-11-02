@@ -1509,6 +1509,9 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	 * Resolve the bean class for the specified bean definition,
 	 * resolving a bean class name into a Class reference (if necessary)
 	 * and storing the resolved Class in the bean definition for further use.
+	 *
+	 * 为 mbd 解析出对应的 bean clazz
+	 *
 	 * @param mbd the merged bean definition to determine the class for
 	 * @param beanName the name of the bean (for error handling purposes)
 	 * @param typesToMatch the types to match in case of internal type matching purposes
@@ -1521,14 +1524,23 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			throws CannotLoadBeanClassException {
 
 		try {
+			// 如果 mbd 设置了 beanClass，直接返回设置的 clazz
 			if (mbd.hasBeanClass()) {
 				return mbd.getBeanClass();
 			}
+			// 如果成功获取到系统的安全管理器
 			if (System.getSecurityManager() != null) {
+				/*
+				 * AccessController.doPrivileged 先不用关注。可以参考 link:
+				 * https://www.jianshu.com/p/3fe79e24f8a1, https://www.iteye.com/blog/huangyunbin-1942509
+				 *
+				 * 获取 mbd 配置的 bean className，加载对应的 clazz，并将加载后的 clazz 缓存在 mbd 中
+				 */
 				return AccessController.doPrivileged((PrivilegedExceptionAction<Class<?>>)
 						() -> doResolveBeanClass(mbd, typesToMatch), getAccessControlContext());
 			}
 			else {
+				// 获取 mbd 配置的 bean className，加载对应的 clazz，并将加载后的 clazz 缓存在 mbd 中
 				return doResolveBeanClass(mbd, typesToMatch);
 			}
 		}
@@ -1544,14 +1556,26 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		}
 	}
 
+	/**
+	 * 获取 mbd 配置的 bean className，加载对应的 clazz，并将加载后的 clazz 缓存在 mbd 中
+	 * 这里 mbd 指的是 MergedBeanDefinition
+	 *
+	 * @param mbd
+	 * @param typesToMatch
+	 * @return
+	 * @throws ClassNotFoundException
+	 */
 	@Nullable
 	private Class<?> doResolveBeanClass(RootBeanDefinition mbd, Class<?>... typesToMatch)
 			throws ClassNotFoundException {
 
+		// 获取该工厂加载 bean 用的类加载器 beanClassLoader
 		ClassLoader beanClassLoader = getBeanClassLoader();
+		// 声明一个动态类加载器 dynamicLoader，默认引用 beanClassLoader
 		ClassLoader dynamicLoader = beanClassLoader;
 		boolean freshResolve = false;
 
+		// 对入参 typesToMatch 进行处理
 		if (!ObjectUtils.isEmpty(typesToMatch)) {
 			// When just doing type checks (i.e. not creating an actual instance yet),
 			// use the specified temporary class loader (e.g. in a weaving scenario).
@@ -1568,8 +1592,10 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			}
 		}
 
+		// 从 mbd 中获取配置的 bean className
 		String className = mbd.getBeanClassName();
 		if (className != null) {
+			// 评估 mbd 的 className，如果 className 是可解析表达式，会对其进行解析，然后加载 clazz
 			Object evaluated = evaluateBeanDefinitionString(className, mbd);
 			if (!className.equals(evaluated)) {
 				// A dynamically resolved expression, supported as of 4.2...
@@ -1602,6 +1628,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		}
 
 		// Resolve regularly, caching the result in the BeanDefinition...
+		// 根据 bean 的 className 加载 clazz，并把 clazz 缓存在 mbd 中
 		return mbd.resolveBeanClass(beanClassLoader);
 	}
 

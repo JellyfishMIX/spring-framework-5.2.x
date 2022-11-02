@@ -202,8 +202,8 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	private final Map<String, AutowireCandidateQualifier> qualifiers = new LinkedHashMap<>();
 
 	/**
-	 * 用于初始化 bean 的回调函数，一旦指定，这个方法会覆盖工厂方法以及构造函数中的元数据
-	 * 可以理解为，通过这个函数的逻辑初始化 bean，而不是构造函数或是工厂方法
+	 * 用于初始化 bean 的回调函数，一旦指定，这个方法会覆盖构造方法和工厂方法。
+	 * 可以理解为，通过这个函数的逻辑初始化 bean，而不是构造方法或是工厂方法。
 	 */
 	@Nullable
 	private Supplier<?> instanceSupplier;
@@ -565,6 +565,7 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 		if (className == null) {
 			return null;
 		}
+		// 根据 bean 的 className 加载后的 clazz
 		Class<?> resolvedClass = ClassUtils.forName(className, classLoader);
 		this.beanClass = resolvedClass;
 		return resolvedClass;
@@ -1225,11 +1226,16 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	/**
 	 * Validate and prepare the method overrides defined for this bean.
 	 * Checks for existence of a method with the specified name.
+	 *
+	 * 预处理 bean 需要重写的目标名称方法
+	 *
 	 * @throws BeanDefinitionValidationException in case of validation failure
 	 */
 	public void prepareMethodOverrides() throws BeanDefinitionValidationException {
 		// Check that lookup methods exist and determine their overloaded status.
+		// 判断此 bean 是否有方法需要重写，这里根据 BeanDefinition 中的 methodOverrides 属性来进行判断，为空则表示没有
 		if (hasMethodOverrides()) {
+			// 预先做检查，如果目标名称方法没有重载情况，直接设置一个标志位。后续就不需要进行方法参数匹配，直接判断标志位即可。
 			getMethodOverrides().getOverrides().forEach(this::prepareMethodOverride);
 		}
 	}
@@ -1238,10 +1244,15 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	 * Validate and prepare the given method override.
 	 * Checks for existence of a method with the specified name,
 	 * marking it as not overloaded if none found.
+	 *
+	 * 如果目标名称方法存在重载情况，则 spring 在方法调用及增强时，需要根据参数列表进行匹配，确定最终调用的方法是哪一个。
+	 * 这里预先做检查，如果目标名称方法没有重载情况，直接设置一个标志位。后续就不需要进行方法参数匹配，直接判断标志位即可。
+	 *
 	 * @param mo the MethodOverride object to validate
 	 * @throws BeanDefinitionValidationException in case of validation failure
 	 */
 	protected void prepareMethodOverride(MethodOverride mo) throws BeanDefinitionValidationException {
+		// 根据需要重写的方法名称，获取 bean 对应的类中关于该方法的重载有几个
 		int count = ClassUtils.getMethodCountForName(getBeanClass(), mo.getMethodName());
 		if (count == 0) {
 			throw new BeanDefinitionValidationException(
@@ -1250,6 +1261,7 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 		}
 		else if (count == 1) {
 			// Mark override as not overloaded, to avoid the overhead of arg type checking.
+			// 如果目标名称方法没有重载情况，直接设置一个标志位
 			mo.setOverloaded(false);
 		}
 	}
