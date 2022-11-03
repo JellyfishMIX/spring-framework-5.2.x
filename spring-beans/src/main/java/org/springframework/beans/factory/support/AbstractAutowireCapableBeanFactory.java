@@ -1245,7 +1245,11 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			return obtainFromSupplier(instanceSupplier, beanName);
 		}
 
-		// 通过工厂方法创建 bean。通过 @Bean 注解方法注入的 bean，或者 xml 配置注入的 BeanDefinition 会存在这个工厂方法。而注入 bean 的方法就是工厂方法。
+		/*
+		 * 如果 mbd 指定了 factoryMethod，则通过 factoryMethod 创建 bean。
+		 * 通过 @Bean 注解方法注入的 bean，或者 xml 配置注入的 BeanDefinition 会存在这个 factoryMethod。
+		 * 注入 bean 的方法就是 factoryMethod。
+		 */
 		if (mbd.getFactoryMethodName() != null) {
 			return instantiateUsingFactoryMethod(beanName, mbd, args);
 		}
@@ -1254,7 +1258,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		 * Shortcut when re-creating the same bean...
 		 * 经过上面的步骤，spring 确定没有其他方式来创建 bean，计划使用 beanClass 本身的构造方法创建 bean。
 		 * 但是 beanClass 的构造方法可能有多个，需要确定使用哪一个。
-		 * 这里的 resolved 和 autowireNecessary 实际上是缓存，resolved 表示构造函数是否已经解析完成。autowireNecessary 表示是否需要自动装配。
+		 * 这里的 resolved 和 autowireNecessary 是标记，resolved 表示构造函数是否已经解析完成。autowireNecessary 表示是否需要自动装配。
 		 */
 		boolean resolved = false;
 		boolean autowireNecessary = false;
@@ -1269,19 +1273,19 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 		// 如果已经解析过 beanClass 的构造函数或工厂方法，则使用解析好的构造函数或工厂工厂方法，不需要再次解析。
 		if (resolved) {
-			// 如果支持自动装配，则使用解析过的构造方法自动注入
+			// 如果 bean 启用自动装配，则使用 autowireConstructor 方法返回的构造方法创建 bean
 			if (autowireNecessary) {
 				return autowireConstructor(beanName, mbd, null, null);
 			}
 			else {
-				// 如果不支持自动装配，则使用默认的构造方法创建 bean
+				// 如果 bean 未启用自动装配，则使用默认的构造方法创建 bean
 				return instantiateBean(beanName, mbd);
 			}
 		}
 
 		/*
 		 * Candidate constructors for autowiring?
-		 * 走到这一步，说明 bean 是第一次加载，所以没有对 beanClass 的构造方法进行相关缓存(resolved 为 false)。
+		 * 走到这一步，说明 bean 是第一次加载，所以没有对创建 bean 使用的构造方法进行缓存(resolved 为 false)。
 		 * 根据 args 参数解析构造方法，并将解析出来的构造方法缓存到 mbd 的 resolvedConstructorOrFactoryMethod 属性中。
 		 * 调用 determineConstructorsFromBeanPostProcessors 方法获取指定 beanClass 的构造方法列表。
 		 */
@@ -1292,14 +1296,14 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		// Preferred constructors for default construction?
-		// 如果 mbd 设置了首选构造方法，则使用首选构造方法
+		// 如果 mbd 设置了首选构造方法，使用首选构造方法创建 bean
 		ctors = mbd.getPreferredConstructors();
 		if (ctors != null) {
 			return autowireConstructor(beanName, mbd, ctors, null);
 		}
 
 		// No special handling: simply use no-arg constructor.
-		// mbd 未设置首选构造方法，使用默认构造方法
+		// mbd 未设置首选构造方法，使用无参构造方法创建 bean
 		return instantiateBean(beanName, mbd);
 	}
 
