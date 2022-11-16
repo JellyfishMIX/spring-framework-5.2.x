@@ -513,44 +513,69 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		return this.applicationListeners;
 	}
 
+	/**
+	 * 刷新 spring 应用的上下文
+	 * 此方法大量使用了模版方法模式，规定了刷新应用上下文统一的动作，具体动作实现逻辑可供子类定制化。
+	 */
 	@Override
 	public void refresh() throws BeansException, IllegalStateException {
+		// 获取启动关闭锁，线程安全地刷新 spring 应用上下文
 		synchronized (this.startupShutdownMonitor) {
 			// Prepare this context for refreshing.
+			// 准备刷新上下文，例如对系统属性或者环境变量进行准备及验证。
 			prepareRefresh();
 
-			// Tell the subclass to refresh the internal bean factory.
+			/*
+			 * Tell the subclass to refresh the internal bean factory.
+			 *
+			 * 初始化 beanFactory，如果需要读取 xml 配置，也是在这一步完成的。
+			 * 这一步之后 ApplicationContext 就具有了 BeanFactory 所提供的功能，也就是可以进行 Bean 的提取等基础操作了。
+			 */
 			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
 
 			// Prepare the bean factory for use in this context.
+			// 对 beanFactory 进行各种功能填充
 			prepareBeanFactory(beanFactory);
 
 			try {
 				// Allows post-processing of the bean factory in context subclasses.
+				// 对 BeanFactory 做额外处理
 				postProcessBeanFactory(beanFactory);
 
-				// Invoke factory processors registered as beans in the context.
+				/*
+				 * Invoke factory processors registered as beans in the context.
+				 *
+				 * 调用各种 BeanFactoryPostProcessor(BeanFactory 处理器)
+				 * 其中最关键的是 ConfigurationClassPostProcessor，在这里完成了配置类的解析，生成配置类的 BeanDefinition。
+				 */
 				invokeBeanFactoryPostProcessors(beanFactory);
 
 				// Register bean processors that intercept bean creation.
+				// 注册 BeanPostProcessor
 				registerBeanPostProcessors(beanFactory);
 
 				// Initialize message source for this context.
+				// 为上下文初始化 MessageSource，对不同语言的消息体进行国际化处理
 				initMessageSource();
 
 				// Initialize event multicaster for this context.
+				// 初始化应用消息广播器
 				initApplicationEventMulticaster();
 
 				// Initialize other special beans in specific context subclasses.
+				// 留给子类的扩展方法，是一个 Context 生命周期函数。例如子类可以用来初始化其他 bean
 				onRefresh();
 
 				// Check for listener beans and register them.
+				// 在所有注册的 bean 中查找 listener bean，注册到应用消息广播器中
 				registerListeners();
 
 				// Instantiate all remaining (non-lazy-init) singletons.
+				// 非延迟地初始化剩下的实例，这里调用了 ConfigurableListableBeanFactory#getBean 方法，获得了 bean 实例
 				finishBeanFactoryInitialization(beanFactory);
 
 				// Last step: publish corresponding event.
+				// 完成刷新过程，调用生命周期处理器 lifecycleProcessor 的 onRefresh 方法。并且发布 ContextRefreshEvent。
 				finishRefresh();
 			}
 

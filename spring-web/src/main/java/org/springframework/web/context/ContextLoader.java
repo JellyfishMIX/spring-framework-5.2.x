@@ -252,6 +252,9 @@ public class ContextLoader {
 	 * using the application context provided at construction time, or creating a new one
 	 * according to the "{@link #CONTEXT_CLASS_PARAM contextClass}" and
 	 * "{@link #CONFIG_LOCATION_PARAM contextConfigLocation}" context-params.
+	 *
+	 * 初始化 web 应用上下文
+	 *
 	 * @param servletContext current servlet context
 	 * @return the new WebApplicationContext
 	 * @see #ContextLoader(WebApplicationContext)
@@ -275,6 +278,7 @@ public class ContextLoader {
 		try {
 			// Store context in local instance variable, to guarantee that
 			// it is available on ServletContext shutdown.
+			// 当前应用上下文的创建
 			if (this.context == null) {
 				this.context = createWebApplicationContext(servletContext);
 			}
@@ -289,6 +293,7 @@ public class ContextLoader {
 						ApplicationContext parent = loadParentContext(servletContext);
 						cwac.setParent(parent);
 					}
+					// 配置和刷新当前容器
 					configureAndRefreshWebApplicationContext(cwac, servletContext);
 				}
 			}
@@ -324,29 +329,42 @@ public class ContextLoader {
 	 * Can be overridden in subclasses.
 	 * <p>In addition, {@link #customizeContext} gets called prior to refreshing the
 	 * context, allowing subclasses to perform custom modifications to the context.
+	 *
+	 * 创建指定的应用上下文
+	 *
 	 * @param sc current servlet context
 	 * @return the root WebApplicationContext
 	 * @see ConfigurableWebApplicationContext
 	 */
 	protected WebApplicationContext createWebApplicationContext(ServletContext sc) {
+		// 获取应用上下文的 clazz
 		Class<?> contextClass = determineContextClass(sc);
 		if (!ConfigurableWebApplicationContext.class.isAssignableFrom(contextClass)) {
 			throw new ApplicationContextException("Custom context class [" + contextClass.getName() +
 					"] is not of type [" + ConfigurableWebApplicationContext.class.getName() + "]");
 		}
+		// 创建应用上下文实例
 		return (ConfigurableWebApplicationContext) BeanUtils.instantiateClass(contextClass);
 	}
 
 	/**
 	 * Return the WebApplicationContext implementation class to use, either the
 	 * default XmlWebApplicationContext or a custom context class if specified.
+	 *
+	 * 获取应用上下文的 clazz
+	 *
 	 * @param servletContext current servlet context
 	 * @return the WebApplicationContext implementation class to use
 	 * @see #CONTEXT_CLASS_PARAM
 	 * @see org.springframework.web.context.support.XmlWebApplicationContext
 	 */
 	protected Class<?> determineContextClass(ServletContext servletContext) {
+		// 尝试获取 servletContext 中指定的应用上下文名称
 		String contextClassName = servletContext.getInitParameter(CONTEXT_CLASS_PARAM);
+		/*
+		 * 如果 servletContext 中指定了，则获取指定的应用上下文 clazz。指定方式和 web.xml 中设置的两个参数有关 contextClass, contextConfigLocation
+		 * 指定的应用上下文来源，是在 web.xml 中设置的。contextClass 和 contextConfigLocation
+		 */
 		if (contextClassName != null) {
 			try {
 				return ClassUtils.forName(contextClassName, ClassUtils.getDefaultClassLoader());
@@ -356,6 +374,10 @@ public class ContextLoader {
 						"Failed to load custom context class [" + contextClassName + "]", ex);
 			}
 		}
+		/*
+		 * 如果 servletContext 中未指定，则获取默认的应用上下文 clazz
+		 * 默认的应用上下文来源，在 defaultStrategies 中获得的，要看 defaultStrategies 初始化的位置，在 ContextLoader 的 static 代码块中
+		 */
 		else {
 			contextClassName = defaultStrategies.getProperty(WebApplicationContext.class.getName());
 			try {
@@ -368,6 +390,9 @@ public class ContextLoader {
 		}
 	}
 
+	/**
+	 * 配置和刷新当前容器
+	 */
 	protected void configureAndRefreshWebApplicationContext(ConfigurableWebApplicationContext wac, ServletContext sc) {
 		if (ObjectUtils.identityToString(wac).equals(wac.getId())) {
 			// The application context id is still set to its original default value
@@ -398,6 +423,12 @@ public class ContextLoader {
 		}
 
 		customizeContext(sc, wac);
+		/*
+		 * 调用 ConfigurableWebApplicationContext#refresh 方法，具体实现是 AbstractApplicationContext#refresh
+		 * 其实 AbstractApplicationContext#refresh 方法也是被具体的应用上下文实现通过继承的方式调用的，
+		 * 具体的应用上下文是什么可以看 ContextLoader#initWebApplicationContext 方法中调用的 ContextLoader#createWebApplicationContext 方法。
+		 * 默认使用的应用上下文是 XmlWebApplicationContext
+		 */
 		wac.refresh();
 	}
 
