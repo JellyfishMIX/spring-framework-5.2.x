@@ -127,10 +127,20 @@ public class SimpleApplicationEventMulticaster extends AbstractApplicationEventM
 		multicastEvent(event, resolveDefaultEventType(event));
 	}
 
+	/**
+	 * 当 spring 的 ApplicationEvent 事件产生的时候，使用 multicastEvent 方法来广播事件。应用了观察者模式。
+	 *
+	 * @param event the event to multicast
+	 * @param eventType the type of event (can be {@code null})
+	 */
 	@Override
 	public void multicastEvent(final ApplicationEvent event, @Nullable ResolvableType eventType) {
 		ResolvableType type = (eventType != null ? eventType : resolveDefaultEventType(event));
 		Executor executor = getTaskExecutor();
+		/*
+		 * 遍历所有的 ApplicationListener，使用 invokeListener 方法触发每个 listener 的 onApplicationEvent 方法，让 listener 感知到事件的产生
+		 * 每个 listener 都可以获取到产生的事件，如何处理由 listener 自行决定
+		 */
 		for (ApplicationListener<?> listener : getApplicationListeners(event, type)) {
 			if (executor != null) {
 				executor.execute(() -> invokeListener(listener, event));

@@ -860,6 +860,9 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		return (this.configurationFrozen || super.isBeanEligibleForMetadataCaching(beanName));
 	}
 
+	/**
+	 * 初始化所有非惰性单例 bean
+	 */
 	@Override
 	public void preInstantiateSingletons() throws BeansException {
 		if (logger.isTraceEnabled()) {
@@ -868,15 +871,20 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 		// Iterate over a copy to allow for init methods which in turn register new bean definitions.
 		// While this may not be part of the regular factory bootstrap, it does otherwise work fine.
+		// 获取 beanFactory 中所有 beanDefinition 的 beanName
 		List<String> beanNames = new ArrayList<>(this.beanDefinitionNames);
 
 		// Trigger initialization of all non-lazy singleton beans...
+		// 遍历所有 beanName, 获取合并后的 BeanDefinition
 		for (String beanName : beanNames) {
 			RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName);
+			// 非抽象 && 单例 && 非惰性加载
 			if (!bd.isAbstract() && bd.isSingleton() && !bd.isLazyInit()) {
+				// 如果是 FactoryBean 类型，则拼接 & 这个转译前缀，来获取 FactoryBean 实例本身
 				if (isFactoryBean(beanName)) {
 					Object bean = getBean(FACTORY_BEAN_PREFIX + beanName);
 					if (bean instanceof FactoryBean) {
+						// 判断是否要立即初始化 Bean。对于 FactoryBean，可能并不需要立即初始化其 getObject 方法代理的对象。
 						FactoryBean<?> factory = (FactoryBean<?>) bean;
 						boolean isEagerInit;
 						if (System.getSecurityManager() != null && factory instanceof SmartFactoryBean) {
@@ -893,6 +901,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 						}
 					}
 				}
+				// 非 FactoryBean 则直接调用 getBean 来实例化 bean
 				else {
 					getBean(beanName);
 				}
@@ -900,6 +909,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 		}
 
 		// Trigger post-initialization callback for all applicable beans...
+		// 触发所有 SmartInitializingSingleton 实例 bean 的 afterSingletonsInstantiated 回调方法，属于生命周期函数
 		for (String beanName : beanNames) {
 			Object singletonInstance = getSingleton(beanName);
 			if (singletonInstance instanceof SmartInitializingSingleton) {

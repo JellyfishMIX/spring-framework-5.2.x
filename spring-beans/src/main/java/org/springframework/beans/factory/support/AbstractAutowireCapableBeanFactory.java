@@ -1758,6 +1758,11 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 * Apply the given property values, resolving any runtime references
 	 * to other beans in this bean factory. Must use deep copy, so we
 	 * don't permanently modify this property.
+	 *
+	 * 将获取的 propertyValue 设置到 bean 中
+	 * 细节: SpEL(Spring Expression Language) 的支持: applyPropertyValues 方法中通过创建 BeanDefinitionValueResolver 实例 valueResolver 来进行 bean 属性值的解析
+	 * 在这个步骤中通过 AbstractBeanFactory#evaluateBeanDefinitionString 方法完成了 SpEL 的解析
+	 *
 	 * @param beanName the bean name passed for better exception information
 	 * @param mbd the merged bean definition
 	 * @param bw the BeanWrapper wrapping the target object
