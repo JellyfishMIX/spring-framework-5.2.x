@@ -125,23 +125,31 @@ public class RequestParamMethodArgumentResolver extends AbstractNamedValueMethod
 	 */
 	@Override
 	public boolean supportsParameter(MethodParameter parameter) {
+		// 有 @RequestParam 注解的情况
 		if (parameter.hasParameterAnnotation(RequestParam.class)) {
+			// 如果是 Map 类型，则 @RequestParam 注解必须要有 name 属性
 			if (Map.class.isAssignableFrom(parameter.nestedIfOptional().getNestedParameterType())) {
 				RequestParam requestParam = parameter.getParameterAnnotation(RequestParam.class);
 				return (requestParam != null && StringUtils.hasText(requestParam.name()));
 			}
+			// 有 @RequestParam 注解的情况且非 Map，则直接适用
 			else {
 				return true;
 			}
 		}
+		// 没有 @RequestParam 注解的情况
 		else {
+			// 如果有 @RequestPart 注解，返回 false
 			if (parameter.hasParameterAnnotation(RequestPart.class)) {
 				return false;
 			}
+			// 获得参数，内嵌(Optional)参数则获得内嵌值，非内嵌参数直接用 parameter 本身
 			parameter = parameter.nestedIfOptional();
+			// 如果是 Multipart 参数，则适用
 			if (MultipartResolutionDelegate.isMultipartArgument(parameter)) {
 				return true;
 			}
+			// 如果开启 useDefaultResolution 功能，则判断是否为普通类型
 			else if (this.useDefaultResolution) {
 				return BeanUtils.isSimpleProperty(parameter.getNestedParameterType());
 			}
@@ -160,6 +168,7 @@ public class RequestParamMethodArgumentResolver extends AbstractNamedValueMethod
 	@Override
 	@Nullable
 	protected Object resolveName(String name, MethodParameter parameter, NativeWebRequest request) throws Exception {
+		// 情况一，HttpServletRequest 情况下的 MultipartFile 和 Part
 		HttpServletRequest servletRequest = request.getNativeRequest(HttpServletRequest.class);
 
 		if (servletRequest != null) {
@@ -170,6 +179,7 @@ public class RequestParamMethodArgumentResolver extends AbstractNamedValueMethod
 		}
 
 		Object arg = null;
+		// 情况二，MultipartHttpServletRequest 情况下的 MultipartFile 的情况
 		MultipartRequest multipartRequest = request.getNativeRequest(MultipartRequest.class);
 		if (multipartRequest != null) {
 			List<MultipartFile> files = multipartRequest.getFiles(name);
@@ -177,6 +187,8 @@ public class RequestParamMethodArgumentResolver extends AbstractNamedValueMethod
 				arg = (files.size() == 1 ? files.get(0) : files);
 			}
 		}
+
+		// 情况三，普通参数的获取
 		if (arg == null) {
 			String[] paramValues = request.getParameterValues(name);
 			if (paramValues != null) {

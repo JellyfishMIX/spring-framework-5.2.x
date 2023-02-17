@@ -57,6 +57,9 @@ public interface HandlerAdapter {
 	 * <p>{@code
 	 * return (handler instanceof MyHandler);
 	 * }
+	 *
+	 * 判断是否支持该 handler
+	 *
 	 * @param handler the handler object to check
 	 * @return whether or not this object can use the given handler
 	 */
@@ -65,6 +68,9 @@ public interface HandlerAdapter {
 	/**
 	 * Use the given handler to handle this request.
 	 * The workflow that is required may vary widely.
+	 *
+	 * handler 执行，返回 ModelAndView 结果
+	 *
 	 * @param request current HTTP request
 	 * @param response current HTTP response
 	 * @param handler the handler to use. This object must have previously been passed
@@ -80,6 +86,9 @@ public interface HandlerAdapter {
 	/**
 	 * Same contract as for HttpServlet's {@code getLastModified} method.
 	 * Can simply return -1 if there's no support in the handler class.
+	 *
+	 * 返回请求的最新更新时间，如果不支持该操作，返回 -1 即可
+	 *
 	 * @param request current HTTP request
 	 * @param handler the handler to use
 	 * @return the lastModified value for the given handler

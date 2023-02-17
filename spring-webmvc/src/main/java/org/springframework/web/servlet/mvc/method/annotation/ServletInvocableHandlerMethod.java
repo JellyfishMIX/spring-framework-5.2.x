@@ -101,10 +101,12 @@ public class ServletInvocableHandlerMethod extends InvocableHandlerMethod {
 	 */
 	public void invokeAndHandle(ServletWebRequest webRequest, ModelAndViewContainer mavContainer,
 			Object... providedArgs) throws Exception {
-
+		// 执行调用
 		Object returnValue = invokeForRequest(webRequest, mavContainer, providedArgs);
+		// 设置 responseStatus
 		setResponseStatus(webRequest);
 
+		// 如果 returnValue 为空，设置 ModelAndViewContainer 为请求已处理然后 return，和 @ResponseStatus 注解相关
 		if (returnValue == null) {
 			if (isRequestNotModified(webRequest) || getResponseStatus() != null || mavContainer.isRequestHandled()) {
 				disableContentCachingIfNecessary(webRequest);
@@ -117,9 +119,11 @@ public class ServletInvocableHandlerMethod extends InvocableHandlerMethod {
 			return;
 		}
 
+		// 设置 ModelAndViewContainer 为请求未处理
 		mavContainer.setRequestHandled(false);
 		Assert.state(this.returnValueHandlers != null, "No return value handlers");
 		try {
+			// 通过 HandlerMethodReturnValueHandlerComposite(HandlerMethodReturnValueHandler) 处理返回值
 			this.returnValueHandlers.handleReturnValue(
 					returnValue, getReturnValueType(returnValue), mavContainer, webRequest);
 		}
@@ -135,23 +139,28 @@ public class ServletInvocableHandlerMethod extends InvocableHandlerMethod {
 	 * Set the response status according to the {@link ResponseStatus} annotation.
 	 */
 	private void setResponseStatus(ServletWebRequest webRequest) throws IOException {
+		// 获得 status，和 @ResponseStatus 注解相关
 		HttpStatus status = getResponseStatus();
 		if (status == null) {
 			return;
 		}
 
+		// 设置响应的状态码
 		HttpServletResponse response = webRequest.getResponse();
 		if (response != null) {
 			String reason = getResponseStatusReason();
+			// 有 reason，则设置 status + reason
 			if (StringUtils.hasText(reason)) {
 				response.sendError(status.value(), reason);
 			}
 			else {
+				// 无 reason，仅设置 status
 				response.setStatus(status.value());
 			}
 		}
 
 		// To be picked up by RedirectView
+		// RedirectView 相关
 		webRequest.getRequest().setAttribute(View.RESPONSE_STATUS_ATTRIBUTE, status);
 	}
 

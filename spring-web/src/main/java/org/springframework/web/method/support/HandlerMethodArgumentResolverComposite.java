@@ -37,9 +37,14 @@ import org.springframework.web.context.request.NativeWebRequest;
  * @since 3.1
  */
 public class HandlerMethodArgumentResolverComposite implements HandlerMethodArgumentResolver {
-
+	/**
+	 * 存储 argumentResolvers 的集合
+	 */
 	private final List<HandlerMethodArgumentResolver> argumentResolvers = new ArrayList<>();
 
+	/**
+	 * MethodParameter 与 HandlerMethodArgumentResolver 的映射，作为缓存用于快速获取
+	 */
 	private final Map<MethodParameter, HandlerMethodArgumentResolver> argumentResolverCache =
 			new ConcurrentHashMap<>(256);
 
@@ -112,26 +117,33 @@ public class HandlerMethodArgumentResolverComposite implements HandlerMethodArgu
 	@Nullable
 	public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
 			NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
-
+		// 获取当前 methodParameter 适合的 argumentResolver
 		HandlerMethodArgumentResolver resolver = getArgumentResolver(parameter);
 		if (resolver == null) {
 			throw new IllegalArgumentException("Unsupported parameter type [" +
 					parameter.getParameterType().getName() + "]. supportsParameter should be called first.");
 		}
+		// 使用 argumentResolver 解析参数
 		return resolver.resolveArgument(parameter, mavContainer, webRequest, binderFactory);
 	}
 
 	/**
 	 * Find a registered {@link HandlerMethodArgumentResolver} that supports
 	 * the given method parameter.
+	 *
+	 * 获取当前 methodParameter 适合的 argumentResolver
 	 */
 	@Nullable
 	private HandlerMethodArgumentResolver getArgumentResolver(MethodParameter parameter) {
+		// 优先从 argumentResolverCache 缓存中，获取当前 methodParameter 适合的 argumentResolver
 		HandlerMethodArgumentResolver result = this.argumentResolverCache.get(parameter);
+		// 缓存中没有，遍历 argumentResolvers 集合获取当前 methodParameter 适合的 argumentResolver
 		if (result == null) {
 			for (HandlerMethodArgumentResolver resolver : this.argumentResolvers) {
+				// 是否支持
 				if (resolver.supportsParameter(parameter)) {
 					result = resolver;
+					// 支持的 argumentResolver 加入缓存，break 跳出遍历
 					this.argumentResolverCache.put(parameter, result);
 					break;
 				}

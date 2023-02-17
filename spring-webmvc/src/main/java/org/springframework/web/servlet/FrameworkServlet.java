@@ -527,7 +527,9 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 		long startTime = System.currentTimeMillis();
 
 		try {
+			// 初始化 WebApplicationContext
 			this.webApplicationContext = initWebApplicationContext();
+			// 模板方法，供子类实现初始化工作
 			initFrameworkServlet();
 		}
 		catch (ServletException | RuntimeException ex) {
@@ -990,10 +992,10 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 
 		long startTime = System.currentTimeMillis();
 		Throwable failureCause = null;
-
+		// i18n 国际化设置
 		LocaleContext previousLocaleContext = LocaleContextHolder.getLocaleContext();
 		LocaleContext localeContext = buildLocaleContext(request);
-
+		// 创建 ServletRequestAttributes 对象，初始化上下文 holders，将 request, response 对象放入到线程上下文中
 		RequestAttributes previousAttributes = RequestContextHolder.getRequestAttributes();
 		ServletRequestAttributes requestAttributes = buildRequestAttributes(request, response, previousAttributes);
 
@@ -1003,6 +1005,7 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 		initContextHolders(request, localeContext, requestAttributes);
 
 		try {
+			// 处理请求，核心方法，由子类实现
 			doService(request, response);
 		}
 		catch (ServletException | IOException ex) {

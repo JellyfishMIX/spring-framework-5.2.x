@@ -70,6 +70,9 @@ public abstract class AbstractNamedValueMethodArgumentResolver implements Handle
 	@Nullable
 	private final BeanExpressionContext expressionContext;
 
+	/**
+	 * MethodParameter 和 NamedValueInfo 的映射，作为缓存
+	 */
 	private final Map<MethodParameter, NamedValueInfo> namedValueInfoCache = new ConcurrentHashMap<>(256);
 
 
@@ -95,17 +98,21 @@ public abstract class AbstractNamedValueMethodArgumentResolver implements Handle
 	@Nullable
 	public final Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
 			NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
-
+		// 获得方法参数对应的 namedValueInfo 对象
 		NamedValueInfo namedValueInfo = getNamedValueInfo(parameter);
+		// 如果 parameter 是 Optional 类型，则获取内嵌的参数。否则使用 parameter 本身
 		MethodParameter nestedParameter = parameter.nestedIfOptional();
 
+		// 如果 name 是 spel 表达式(占位符)，则解析成真实的 name
 		Object resolvedName = resolveEmbeddedValuesAndExpressions(namedValueInfo.name);
 		if (resolvedName == null) {
 			throw new IllegalArgumentException(
 					"Specified name must not resolve to null: [" + namedValueInfo.name + "]");
 		}
 
+		// 解析 name 对应的值，由子类实现
 		Object arg = resolveName(resolvedName.toString(), nestedParameter, webRequest);
+		// 如果 arg 为空，则使用默认值。默认值不存在则处理参数缺省和空值的情况。
 		if (arg == null) {
 			if (namedValueInfo.defaultValue != null) {
 				arg = resolveEmbeddedValuesAndExpressions(namedValueInfo.defaultValue);
@@ -119,6 +126,7 @@ public abstract class AbstractNamedValueMethodArgumentResolver implements Handle
 			arg = resolveEmbeddedValuesAndExpressions(namedValueInfo.defaultValue);
 		}
 
+		// 数据绑定相关
 		if (binderFactory != null) {
 			WebDataBinder binder = binderFactory.createBinder(webRequest, null, namedValueInfo.name);
 			try {
@@ -134,6 +142,7 @@ public abstract class AbstractNamedValueMethodArgumentResolver implements Handle
 			}
 		}
 
+		// 后置处理解析的参数值
 		handleResolvedValue(arg, namedValueInfo.name, parameter, mavContainer, webRequest);
 
 		return arg;
@@ -143,10 +152,14 @@ public abstract class AbstractNamedValueMethodArgumentResolver implements Handle
 	 * Obtain the named value for the given method parameter.
 	 */
 	private NamedValueInfo getNamedValueInfo(MethodParameter parameter) {
+		// 从 namedValueInfoCache 缓存中，获得 namedValueInfo 对象
 		NamedValueInfo namedValueInfo = this.namedValueInfoCache.get(parameter);
 		if (namedValueInfo == null) {
+			// 获得不到 namedValueInfo 则创建，这是一个抽象方法，由子类具体实现
 			namedValueInfo = createNamedValueInfo(parameter);
+			// 更新 namedValueInfo 对象
 			namedValueInfo = updateNamedValueInfo(parameter, namedValueInfo);
+			// 添加到 namedValueInfoCache 缓存中
 			this.namedValueInfoCache.put(parameter, namedValueInfo);
 		}
 		return namedValueInfo;
@@ -265,13 +278,22 @@ public abstract class AbstractNamedValueMethodArgumentResolver implements Handle
 
 	/**
 	 * Represents the information about a named value, including name, whether it's required and a default value.
+	 * 静态内部类，对应注解的属性
 	 */
 	protected static class NamedValueInfo {
-
+		/**
+		 * 名称
+		 */
 		private final String name;
 
+		/**
+		 * 是否必填
+		 */
 		private final boolean required;
 
+		/**
+		 * 默认值
+		 */
 		@Nullable
 		private final String defaultValue;
 
