@@ -126,11 +126,12 @@ public class RequestResponseBodyMethodProcessor extends AbstractMessageConverter
 	@Override
 	public Object resolveArgument(MethodParameter parameter, @Nullable ModelAndViewContainer mavContainer,
 			NativeWebRequest webRequest, @Nullable WebDataBinderFactory binderFactory) throws Exception {
-
 		parameter = parameter.nestedIfOptional();
+		// 从请求体中解析出方法入参值
 		Object arg = readWithMessageConverters(webRequest, parameter, parameter.getNestedGenericParameterType());
 		String name = Conventions.getVariableNameForParameter(parameter);
 
+		// 数据绑定相关
 		if (binderFactory != null) {
 			WebDataBinder binder = binderFactory.createBinder(webRequest, arg, name);
 			if (arg != null) {
@@ -144,6 +145,7 @@ public class RequestResponseBodyMethodProcessor extends AbstractMessageConverter
 			}
 		}
 
+		// 返回方法入参对象，如果有必要，则通过 optional 获取对应的方法入参
 		return adaptArgumentIfNecessary(arg, parameter);
 	}
 
@@ -172,12 +174,14 @@ public class RequestResponseBodyMethodProcessor extends AbstractMessageConverter
 	public void handleReturnValue(@Nullable Object returnValue, MethodParameter returnType,
 			ModelAndViewContainer mavContainer, NativeWebRequest webRequest)
 			throws IOException, HttpMediaTypeNotAcceptableException, HttpMessageNotWritableException {
-
+		// ModelAndViewContainer.requestHandled 属性设置为已处理，这样后续获取到的 ModelAndView 对象为 null
 		mavContainer.setRequestHandled(true);
+		// 创建 ServletServerHttpRequest 和 ServletServerHttpResponse
 		ServletServerHttpRequest inputMessage = createInputMessage(webRequest);
 		ServletServerHttpResponse outputMessage = createOutputMessage(webRequest);
 
 		// Try even with null return value. ResponseBodyAdvice could get involved.
+		// 使用 HttpMessageConverter 对 returnValue 进行转换，并写入到 response
 		writeWithMessageConverters(returnValue, returnType, inputMessage, outputMessage);
 	}
 

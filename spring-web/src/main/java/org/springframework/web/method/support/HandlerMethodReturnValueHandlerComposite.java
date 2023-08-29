@@ -38,6 +38,9 @@ public class HandlerMethodReturnValueHandlerComposite implements HandlerMethodRe
 
 	protected final Log logger = LogFactory.getLog(getClass());
 
+	/**
+	 * 承载着 HandlerMethodReturnValueHandler 的集合
+	 */
 	private final List<HandlerMethodReturnValueHandler> returnValueHandlers = new ArrayList<>();
 
 
@@ -74,21 +77,25 @@ public class HandlerMethodReturnValueHandlerComposite implements HandlerMethodRe
 	@Override
 	public void handleReturnValue(@Nullable Object returnValue, MethodParameter returnType,
 			ModelAndViewContainer mavContainer, NativeWebRequest webRequest) throws Exception {
-
+		// 获取适合的 HandlerMethodReturnValueHandler
 		HandlerMethodReturnValueHandler handler = selectHandler(returnValue, returnType);
 		if (handler == null) {
 			throw new IllegalArgumentException("Unknown return value type: " + returnType.getParameterType().getName());
 		}
+		// 调用具体的 HandlerMethodReturnValueHandler 处理返回值
 		handler.handleReturnValue(returnValue, returnType, mavContainer, webRequest);
 	}
 
 	@Nullable
 	private HandlerMethodReturnValueHandler selectHandler(@Nullable Object value, MethodParameter returnType) {
+		// 对异步返回值的支持
 		boolean isAsyncValue = isAsyncReturnValue(value, returnType);
+		// 遍历 HandlerMethodReturnValueHandler 数组，逐个判断是否支持
 		for (HandlerMethodReturnValueHandler handler : this.returnValueHandlers) {
 			if (isAsyncValue && !(handler instanceof AsyncHandlerMethodReturnValueHandler)) {
 				continue;
 			}
+			// 如果支持，则返回
 			if (handler.supportsReturnType(returnType)) {
 				return handler;
 			}

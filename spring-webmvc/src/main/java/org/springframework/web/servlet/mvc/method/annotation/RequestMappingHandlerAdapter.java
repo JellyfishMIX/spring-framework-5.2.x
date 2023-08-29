@@ -1007,10 +1007,13 @@ public class RequestMappingHandlerAdapter extends AbstractHandlerMethodAdapter
 			ModelFactory modelFactory, NativeWebRequest webRequest) throws Exception {
 
 		modelFactory.updateModel(webRequest, mavContainer);
+		// 情况1, 如果 requestHandled 为 true，即请求已处理，则返回 null
 		if (mavContainer.isRequestHandled()) {
 			return null;
 		}
+		// 情况2, 如果 mavContainer 未处理，则基于 mavContainer 生成 modelAndView
 		ModelMap model = mavContainer.getModel();
+		// 创建 modelAndView 对象，并设置相关属性
 		ModelAndView mav = new ModelAndView(mavContainer.getViewName(), model, mavContainer.getStatus());
 		if (!mavContainer.isViewReference()) {
 			mav.setView((View) mavContainer.getView());

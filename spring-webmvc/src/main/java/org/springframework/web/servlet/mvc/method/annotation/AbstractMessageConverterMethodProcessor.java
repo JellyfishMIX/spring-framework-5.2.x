@@ -167,11 +167,14 @@ public abstract class AbstractMessageConverterMethodProcessor extends AbstractMe
 	protected <T> void writeWithMessageConverters(@Nullable T value, MethodParameter returnType,
 			ServletServerHttpRequest inputMessage, ServletServerHttpResponse outputMessage)
 			throws IOException, HttpMediaTypeNotAcceptableException, HttpMessageNotWritableException {
-
+		// body 来自于 returnValue
 		Object body;
+		// returnValueType
 		Class<?> valueType;
+		// 转换目标
 		Type targetType;
 
+		// 如果是字符串则直接赋值
 		if (value instanceof CharSequence) {
 			body = value.toString();
 			valueType = String.class;
@@ -179,18 +182,24 @@ public abstract class AbstractMessageConverterMethodProcessor extends AbstractMe
 		}
 		else {
 			body = value;
+			// 获取返回结果的类型(返回值 body 不为空则直接获取其类型，否则从返回结果类型 returnType 获取其返回值类型)
 			valueType = getReturnValueType(body, returnType);
 			targetType = GenericTypeResolver.resolveType(getGenericType(returnType), returnType.getContainingClass());
 		}
 
+		// Resource 类型的处理
 		if (isResourceType(value, returnType)) {
+			// 设置响应头 Accept-Ranges
 			outputMessage.getHeaders().set(HttpHeaders.ACCEPT_RANGES, "bytes");
+			// 数据不为空，请求头中的 Range 不为空，status 为 200
 			if (value != null && inputMessage.getHeaders().getFirst(HttpHeaders.RANGE) != null &&
 					outputMessage.getServletResponse().getStatus() == 200) {
 				Resource resource = (Resource) value;
 				try {
 					List<HttpRange> httpRanges = inputMessage.getHeaders().getRange();
+					// 断点续传，客户端已下载一部分数据，此时需要设置响应码为 206
 					outputMessage.getServletResponse().setStatus(HttpStatus.PARTIAL_CONTENT.value());
+					// 获取哪一段数据需返回
 					body = HttpRange.toResourceRegions(httpRanges, resource);
 					valueType = body.getClass();
 					targetType = RESOURCE_REGION_LIST_TYPE;
@@ -202,7 +211,9 @@ public abstract class AbstractMessageConverterMethodProcessor extends AbstractMe
 			}
 		}
 
+		// 选择使用的 MediaType
 		MediaType selectedMediaType = null;
+		// 如果 response 中存在 ContentType 值，并且不包含通配符，则使用它作为 selectedMediaType
 		MediaType contentType = outputMessage.getHeaders().getContentType();
 		boolean isContentTypePreset = contentType != null && contentType.isConcrete();
 		if (isContentTypePreset) {
@@ -211,6 +222,7 @@ public abstract class AbstractMessageConverterMethodProcessor extends AbstractMe
 			}
 			selectedMediaType = contentType;
 		}
+		// 无法直接获取到 response 中的 ContentType 时的处理
 		else {
 			HttpServletRequest request = inputMessage.getServletRequest();
 			List<MediaType> acceptableTypes = getAcceptableMediaTypes(request);
@@ -257,22 +269,29 @@ public abstract class AbstractMessageConverterMethodProcessor extends AbstractMe
 			}
 		}
 
+		// 获取到 selectedMediaType，进行写入逻辑
 		if (selectedMediaType != null) {
+			// 移除 quality，例如 application/json;q=0.8 移除后为 application/json
 			selectedMediaType = selectedMediaType.removeQualityValue();
+			// 遍历 messageConverters 数组，获取支持转换目标类型的 messageConverter
 			for (HttpMessageConverter<?> converter : this.messageConverters) {
 				GenericHttpMessageConverter genericConverter = (converter instanceof GenericHttpMessageConverter ?
 						(GenericHttpMessageConverter<?>) converter : null);
 				if (genericConverter != null ?
 						((GenericHttpMessageConverter) converter).canWrite(targetType, valueType, selectedMediaType) :
 						converter.canWrite(valueType, selectedMediaType)) {
+					// 如果有 RequestResponseBodyAdvice，则需要对 returnValue 做切入
 					body = getAdvice().beforeBodyWrite(body, returnType, selectedMediaType,
 							(Class<? extends HttpMessageConverter<?>>) converter.getClass(),
 							inputMessage, outputMessage);
+					// 核心逻辑，body(returnValue) 非空进行写入
 					if (body != null) {
 						Object theBody = body;
 						LogFormatUtils.traceDebug(logger, traceOn ->
 								"Writing [" + LogFormatUtils.formatValue(theBody, !traceOn) + "]");
+						// 为 response Header 添加 CONTENT_DISPOSITION，一般情况下用不到
 						addContentDispositionHeader(inputMessage, outputMessage);
+						// 写入内容
 						if (genericConverter != null) {
 							genericConverter.write(body, targetType, selectedMediaType, outputMessage);
 						}
@@ -285,11 +304,13 @@ public abstract class AbstractMessageConverterMethodProcessor extends AbstractMe
 							logger.debug("Nothing to write: null body");
 						}
 					}
+					// returnValue 转换已完成, return
 					return;
 				}
 			}
 		}
 
+		// 如果到达此处，并且 body 非空，说明没有匹配的 HttpMessageConverter 转换器，抛出 HttpMediaTypeNotAcceptableException 异常
 		if (body != null) {
 			Set<MediaType> producibleMediaTypes =
 					(Set<MediaType>) inputMessage.getServletRequest()

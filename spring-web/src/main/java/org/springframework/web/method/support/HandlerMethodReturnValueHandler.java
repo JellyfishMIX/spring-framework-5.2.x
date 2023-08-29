@@ -33,6 +33,9 @@ public interface HandlerMethodReturnValueHandler {
 	/**
 	 * Whether the given {@linkplain MethodParameter method return type} is
 	 * supported by this handler.
+	 *
+	 * 是否支持处理当前返回类型
+	 *
 	 * @param returnType the method return type to check
 	 * @return {@code true} if this handler supports the supplied return type;
 	 * {@code false} otherwise
@@ -44,6 +47,9 @@ public interface HandlerMethodReturnValueHandler {
 	 * setting a view or setting the
 	 * {@link ModelAndViewContainer#setRequestHandled} flag to {@code true}
 	 * to indicate the response has been handled directly.
+	 *
+	 * 处理当前返回值
+	 *
 	 * @param returnValue the value returned from the handler method
 	 * @param returnType the type of the return value. This type must have
 	 * previously been passed to {@link #supportsReturnType} which must
