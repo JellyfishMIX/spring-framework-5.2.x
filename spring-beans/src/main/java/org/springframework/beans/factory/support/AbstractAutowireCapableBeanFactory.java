@@ -1529,7 +1529,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				if (bp instanceof InstantiationAwareBeanPostProcessor) {
 					InstantiationAwareBeanPostProcessor ibp = (InstantiationAwareBeanPostProcessor) bp;
 					/*
-					 * 成员属性值的后置处理，新 api。spring 的默认实现是 AutowiredAnnotationBeanPostProcessor.postProcessProperties
+					 * 成员属性值的后置处理，新 api。例如 spring 的默认实现 AutowiredAnnotationBeanPostProcessor.postProcessProperties
 					 * AutowiredAnnotationBeanPostProcessor 中完成了 @Autowired, @Value 等注解的自动注入功能。
 					 * 大概逻辑是，获取被 @Autowired 修饰的属性或者方法，如果是属性，则通过 getBean 获取 bean 并注入。
 					 * 如果是 setter 方法，则获取方法参数后，invoke 方法，给属性赋值。
