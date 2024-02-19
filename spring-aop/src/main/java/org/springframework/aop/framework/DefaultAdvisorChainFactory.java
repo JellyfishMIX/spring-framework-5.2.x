@@ -53,30 +53,38 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
 
 		// This is somewhat tricky... We have to process introductions first,
 		// but we need to preserve order in the ultimate list.
+		// 获取 AdvisorAdapterRegistry 实例(AdvisorAdapterRegistry 用于将 Advisor 转换为 MethodInterceptor, MethodInterceptor 在 CglibMethodInvocation 中会用到)
 		AdvisorAdapterRegistry registry = GlobalAdvisorAdapterRegistry.getInstance();
 		Advisor[] advisors = config.getAdvisors();
 		List<Object> interceptorList = new ArrayList<>(advisors.length);
 		Class<?> actualClass = (targetClass != null ? targetClass : method.getDeclaringClass());
 		Boolean hasIntroductions = null;
 
+		// 遍历 advisor
 		for (Advisor advisor : advisors) {
 			if (advisor instanceof PointcutAdvisor) {
 				// Add it conditionally.
 				PointcutAdvisor pointcutAdvisor = (PointcutAdvisor) advisor;
 				if (config.isPreFiltered() || pointcutAdvisor.getPointcut().getClassFilter().matches(actualClass)) {
+					// 获取 MethodMatcher, 用于根据当前 advisor 的 pointCut 表达式, 判断当前 advisor 是否和 targetMethod 匹配
 					MethodMatcher mm = pointcutAdvisor.getPointcut().getMethodMatcher();
 					boolean match;
+					// introduction 引介, 不关注
 					if (mm instanceof IntroductionAwareMethodMatcher) {
 						if (hasIntroductions == null) {
 							hasIntroductions = hasMatchingIntroductions(advisors, actualClass);
 						}
 						match = ((IntroductionAwareMethodMatcher) mm).matches(method, actualClass, hasIntroductions);
 					}
+					// 当前接入点(targetMethod)是否匹配当前 advisor
 					else {
 						match = mm.matches(method, actualClass);
 					}
+					// 如果 targetMethod 匹配当前 advisor
 					if (match) {
+						// 使用 AdvisorAdapterRegistry 将 Advisor 转换为 MethodInterceptor
 						MethodInterceptor[] interceptors = registry.getInterceptors(advisor);
+						// 动态匹配器不会直接添加 MethodInterceptor，而是封一层运行时匹配入参的 InterceptorAndDynamicMethodMatcher
 						if (mm.isRuntime()) {
 							// Creating a new object instance in the getInterceptors() method
 							// isn't a problem as we normally cache created chains.
@@ -84,12 +92,14 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
 								interceptorList.add(new InterceptorAndDynamicMethodMatcher(interceptor, mm));
 							}
 						}
+						// 静态匹配器直接添加 MethodInterceptor
 						else {
 							interceptorList.addAll(Arrays.asList(interceptors));
 						}
 					}
 				}
 			}
+			// introduction 引介，不关注
 			else if (advisor instanceof IntroductionAdvisor) {
 				IntroductionAdvisor ia = (IntroductionAdvisor) advisor;
 				if (config.isPreFiltered() || ia.getClassFilter().matches(actualClass)) {
@@ -103,6 +113,7 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
 			}
 		}
 
+		// 返回和 targetMethod 匹配的 MethodInterceptor 责任链
 		return interceptorList;
 	}
 

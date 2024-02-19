@@ -77,6 +77,7 @@ public abstract class AbstractAspectJAdvisorFactory implements AspectJAdvisorFac
 	 */
 	@Override
 	public boolean isAspect(Class<?> clazz) {
+		// 判断是否被 @Aspect 注解标注，并且不是被 aspectj 编译的类
 		return (hasAspectAnnotation(clazz) && !compiledByAjc(clazz));
 	}
 
