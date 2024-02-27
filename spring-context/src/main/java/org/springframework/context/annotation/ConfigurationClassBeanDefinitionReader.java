@@ -128,6 +128,7 @@ class ConfigurationClassBeanDefinitionReader {
 	private void loadBeanDefinitionsForConfigurationClass(
 			ConfigurationClass configClass, TrackedConditionEvaluator trackedConditionEvaluator) {
 
+		// 如果条件装配将其跳过，则对应的 BeanDefinition 不会注册进 BeanDefinitionRegistry
 		if (trackedConditionEvaluator.shouldSkip(configClass)) {
 			String beanName = configClass.getBeanName();
 			if (StringUtils.hasLength(beanName) && this.registry.containsBeanDefinition(beanName)) {
@@ -137,14 +138,18 @@ class ConfigurationClassBeanDefinitionReader {
 			return;
 		}
 
+		// 如果当前配置类是被@Import的，把自己注册进 BeanFactory
 		if (configClass.isImported()) {
 			registerBeanDefinitionForImportedConfigurationClass(configClass);
 		}
 		for (BeanMethod beanMethod : configClass.getBeanMethods()) {
+			// 加载 @Bean 注解声明的 BeanDefinition
 			loadBeanDefinitionsForBeanMethod(beanMethod);
 		}
 
+		// 从 @ImportResource 中指定的文件加载配置 BeanDefinition
 		loadBeanDefinitionsFromImportedResources(configClass.getImportedResources());
+		// 从 ImportBeanDefinitionRegistrar 中加载配置 BeanDefinition
 		loadBeanDefinitionsFromRegistrars(configClass.getImportBeanDefinitionRegistrars());
 	}
 
